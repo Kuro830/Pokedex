@@ -34,7 +34,6 @@ export default function Compare() {
     return (
         <Layout>
             <div classNameName="p-8">
-                <h1 classNameName="text-3xl font-semibold mb-4">Compare Pokemon</h1>
                 <div className="flex flex-col overflow-x-auto">
                     <div className="sm:-mx-6 lg:-mx-8">
                         <div className="inline-block min-w-full py-2 sm:px-6 lg:px-8">
