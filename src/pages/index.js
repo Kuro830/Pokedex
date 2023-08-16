@@ -1,118 +1,263 @@
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
-
-const inter = Inter({ subsets: ['latin'] })
+/* eslint-disable @next/next/no-img-element */
+import { useState, useEffect, Fragment } from "react";
+import { fetchPokemonList, fetchPokemonDetails } from "./api/pokeApi";
+import { getImageURL } from "@Pokedex/helpers/pokemonUtils";
+import { Dialog, Transition } from "@headlessui/react";
+import { useRouter } from "next/router";
+import Layout from "@Pokedex/components/Layout";
+import Link from "next/link";
 
 export default function Home() {
-  return (
-    <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-    >
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/pages/index.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+    const [pokemonList, setPokemonList] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(0);
+    const [selectedPokemon, setSelectedPokemon] = useState([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortBy, setSortBy] = useState("name"); // Default sorting by name
+    const [filteredAndSortedPokemonList, setFilteredAndSortedPokemonList] = useState([]);
+    const [sortDirection, setSortDirection] = useState("ascending");
+    const [pokemonDetail, setPokemonDetail] = useState(null);
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+    const router = useRouter();
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+    const toggleModal = () => {
+        setIsModalOpen(!isModalOpen);
+    };
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+    const handleSelectPokemon = (pokemon) => {
+        if (selectedPokemon.includes(pokemon)) {
+            setSelectedPokemon(
+                selectedPokemon.filter((selected) => selected !== pokemon)
+            );
+        } else {
+            setSelectedPokemon([...selectedPokemon, pokemon]);
+        }
+    };
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
+    const openModalCompare = () => {
+        toggleModal();
+    };
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    const startCompare = () => {
+        router.push({
+            pathname: "/compare",
+            query: {
+                pokemon: selectedPokemon.map((pokemon) => pokemon.name).join(","),
+            },
+        });
+    };
+
+    const handleSearchChange = (event) => {
+        setSearchTerm(event.target.value);
+        setCurrentPage(1); // Reset to the first page when searching
+    };
+
+    const sortPokemonList = (list, sortBy, sortDirection) => {
+        return [...list].sort((a, b) => {
+            if (sortDirection === "ascending") {
+                if (sortBy === "name") {
+                    return a.name.localeCompare(b.name);
+                } else if (sortBy === "id") {
+                    return a.id - b.id;
+                }
+            } else if (sortDirection === "descending") {
+                if (sortBy === "name") {
+                    return b.name.localeCompare(a.name);
+                } else if (sortBy === "id") {
+                    return b.id - a.id;
+                }
+            }
+            return 0;
+        });
+    };
+
+    useEffect(() => {
+        async function fetchData() {
+            const { list, totalPages } = await fetchPokemonList(currentPage);
+            setPokemonList(list);
+            setTotalPages(totalPages);
+        }
+        fetchData();
+    }, [currentPage, searchTerm]);
+
+    useEffect(() => {
+        const filteredList = pokemonList.filter((pokemon) =>
+            pokemon.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        const sortedAndFilteredList = sortPokemonList(
+            filteredList,
+            sortBy,
+            sortDirection
+        );
+        setFilteredAndSortedPokemonList(sortedAndFilteredList);
+    }, [pokemonList, searchTerm, sortBy, sortDirection]);
+     
+    const renderPagination = () => {
+        const maxDisplayedPages = 4; // Jumlah maksimal halaman yang ditampilkan
+        const halfMaxDisplayedPages = Math.floor(maxDisplayedPages / 2);
+
+        let startPage = currentPage - halfMaxDisplayedPages;
+        if (startPage < 1) {
+            startPage = 1;
+        }
+        const endPage = Math.min(startPage + maxDisplayedPages - 1, totalPages);
+
+        const pages = [];
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(
+                <button
+                    key={i}
+                    onClick={() => setCurrentPage(i)}
+                    className={`mx-2 px-4 py-2 rounded-md ${
+                        i === currentPage
+                            ? "bg-red-500 text-white"
+                            : "bg-white text-blue-500 hover:bg-gray-200"
+                    }`}
+                >
+                    {i}
+                </button>
+            );
+        }
+        return pages;
+    };
+
+    return (
+        <Layout>
+            <div className="p-8">
+                <h1 className="text-3xl font-semibold mb-4">Catalog Pokedex</h1>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="relative w-64">
+                        <input
+                            type="text"
+                            placeholder="Search Pokemon"
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            className="w-full p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        />
+                    </div>
+                    <div>
+                        <button
+                            onClick={openModalCompare}
+                            disabled={selectedPokemon.length < 2}
+                            className={`mx-2 px-4 py-2 rounded-md ${
+                                selectedPokemon.length < 2
+                                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                    : "bg-red-500 text-white hover:bg-red-600"
+                            }`}
+                        >
+                            Compare
+                        </button>
+                        <select
+                            value={`${sortBy}-${sortDirection}`}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                const [newSortBy, newSortDirection] = value.split("-");
+                                setSortBy(newSortBy);
+                                setSortDirection(newSortDirection);
+                            }}
+                            className="px-2 py-1 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="name-ascending">Name (Ascending)</option>
+                            <option value="name-descending">Name (Descending)</option>
+                        </select>
+                    </div>
+                </div>
+                <Transition.Root show={isModalOpen} as={Fragment}>
+                    <Dialog
+                        as="div"
+                        className="fixed z-10 inset-0 overflow-y-auto"
+                        onClose={toggleModal}
+                    >
+                        <div className="flex items-center justify-center min-h-screen">
+                            <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 scale-95"
+                                enterTo="opacity-100 scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 scale-100"
+                                leaveTo="opacity-0 scale-95"
+                            >
+                                <div className="relative bg-white rounded-lg w-96 p-6">
+                                    {/* Isi modal */}
+                                    <h2 className="text-2xl font-semibold mb-2">
+                                        Compare Pokemon
+                                    </h2>
+                                    <ul className="space-y-2">
+                                        {selectedPokemon.map((pokemon) => (
+                                            <li key={pokemon.name}>{pokemon.name}</li>
+                                        ))}
+                                    </ul>
+                                    <button
+                                        onClick={startCompare}
+                                        className="mt-4 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+                                    >
+                                        Compare Now
+                                    </button>
+                                </div>
+                            </Transition.Child>
+                        </div>
+                    </Dialog>
+                </Transition.Root>
+                <div className="grid grid-cols-5 gap-4">
+                    {filteredAndSortedPokemonList.map((pokemon, index) => {
+                        // Mendapatkan angka dari URL
+                        const parts = pokemon.url.split("/");
+                        const pokemonId = parseInt(parts[parts.length - 2]);
+
+                        return (
+                            <div
+                                key={pokemon.name}
+                                className="relative bg-white rounded-md shadow-md p-4 flex flex-col justify-between"
+                            >
+                                <Link href={`/detail/${pokemon.name}`} passHref>
+                                    <div className="cursor-pointer">
+                                        <img
+                                            src={getImageURL(pokemonId)}
+                                            alt={pokemon.name}
+                                            className="mx-auto h-32"
+                                        />
+                                    </div>
+                                </Link>
+                                <div className="text-center mt-2 font-medium">
+                                    {pokemon.name}
+                                </div>
+                                <div className="mt-2">
+                                    <button
+                                        onClick={() => handleSelectPokemon(pokemon)}
+                                        className="w-full px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
+                                    >
+                                        {selectedPokemon.includes(pokemon)
+                                            ? "Remove Compare"
+                                            : "Add to Compare"}
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <div className="flex justify-center items-center mt-4">
+                    <button
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="mx-2 px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
+                    >
+                        {"<"}
+                    </button>
+                    {renderPagination()}
+                    <button
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="mx-2 px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
+                    >
+                        {">"}
+                    </button>
+                </div>
+            </div>
+        </Layout>
+    );
 }
